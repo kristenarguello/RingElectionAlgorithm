@@ -54,7 +54,7 @@ func ElectionControler(in chan int) {
 	chans[1] <- temp
 	chans[2] <- temp
 
-	fmt.Println("\n   Processo controlador concluído\n")
+	fmt.Println("\n   Processo controlador concluído")
 }
 
 func ElectionStage(TaskId int, in chan mensagem, out chan mensagem, leader int) {
@@ -112,7 +112,7 @@ func main() {
 
 	go ElectionControler(controle)
 
-	fmt.Println("\n   Processo controlador criado\n")
+	fmt.Println("\n   Processo controlador criado")
 
 	wg.Wait() // Wait for the goroutines to finish\
 }
