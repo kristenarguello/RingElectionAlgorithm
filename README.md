@@ -1,4 +1,6 @@
-# Enunciado do TPD: Algoritmos Distribuídos de Eleição
+# t2-distribuido
+
+## Enunciado do TPD: Algoritmos Distribuídos de Eleição
 
 Implementar o algoritmo distribuído de eleição (de um processo coordenador) baseado em anel lógico (Ring Algorithm) utilizando sua linguagem de preferência:
 
@@ -31,3 +33,4 @@ A avaliação do trabalho será feita com base no acompanhamento do desenvolvime
 - que tipos de mensagens foram usadas na implementação e como são usadas
 - como foram modeladas as falhas
 - como o algoritmo foi testado e que operações foram feitas nestes testes (papel do processo controle)
+
