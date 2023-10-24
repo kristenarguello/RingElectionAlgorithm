@@ -22,7 +22,6 @@ type mensagem struct {
 	tipo  int    // tipo da mensagem para fazer o controle do que fazer (eleição, confirmacao da eleicao)
 	corpo [3]int // conteudo da mensagem para colocar os ids (usar um tamanho ocmpativel com o numero de processos no anel)
 		// idProcInicial, idProc, value
-	msgFail int // 1 e 0 para representar um bool
 }
 
 var (
@@ -172,82 +171,58 @@ func ElectionStage(TaskId int, in chan mensagem, out chan mensagem, leader int, 
 		fmt.Printf("\nElection: %2d: recebi mensagem %d, [ %d, %d, %d ]\n", TaskId, temp.tipo, temp.corpo[0], temp.corpo[1], temp.corpo[2])
 
 		switch temp.tipo {
-		case 0: //electionconfirmation
+		case 0: //electionconfirmation = ELECTION WINNER CONFIRMATION
 			{
-				if bFailed {
-					fmt.Printf("Election: %2d: Processo falho - mensagem de erro\n", TaskId)
-					temp.msgFail = 1
-					anterior <- temp
-				} else if temp.msgFail == 1 {
-					temp.corpo[1] = TaskId
-					if out == in {
-						break
-					}
-					out <- temp
-				} else if temp.corpo[0] != TaskId {
-					fmt.Printf("Election: %2d: Mensagem - processo eleito %d\n", TaskId, temp.corpo[2])
-					actualLeader = temp.corpo[2]
-					out <- temp
+				if bFailed { //nao faz nada se ja estiver falho
+					fmt.Printf("%2d: processo falho, lider nao eleito\n", TaskId)					
+				} else { //falhou = nao faz nada e continua no anel
+					actualLeader = temp.corpo[0]
+					fmt.Printf("%2d: processo eleito: %d\n", TaskId, actualLeader)
 				}
+				out <- temp
+				// nao precisa de controle pq nao sai do anel pra chegar no controle
 			}
 		case 1: // controle indica para este processo que um processo falhou = inicia processo de eleição
 			{
-				if bFailed { //nao faz nada se ja estiver falho
-					fmt.Printf("%2d: processo falho\n", TaskId)
-					controle <- 0
-					break
-				}
-				fmt.Printf("%2d: processo falho\n", TaskId)
-				controle <- 1
-				out <- mensagem{tipo:4, corpo: [3]int{TaskId, TaskId, TaskId}}
-				//mensagem para troca de mensagens para escolher um novo líder
+				//VOTE REQUEST
+				if bFailed {
+					fmt.Printf("\t%2d: nao participou da votacao, processo falho\n", TaskId)
+				} else {
+					temp.corpo[TaskId] = TaskId
+					fmt.Printf("%2d: processo votou")
+				} 
+				out <- temp
+				// nao precisa de controle pq nao sai do anel pra chegar no controle
+
 			}
-		case 2:
+		case 2: // PROCESSO FALHO
 			{
 				bFailed = true
 				fmt.Printf("Election: %2d: falho %v \n", TaskId, bFailed)
-				// fmt.Printf("Election: %2d: lider atual %d\n", TaskId, actualLeader)
 				controle <- 1
 			}
-		case 3:
+		case 3: // PROCESSO ATIVO	
 			{
 				bFailed = false
 				fmt.Printf("Election: %2d: falho %v \n", TaskId, bFailed)
 				// fmt.Printf("Election: %2d: lider atual %d\n", TaskId, actualLeader)
-				out <- mensagem{tipo:4, corpo: [3]int{TaskId, TaskId, TaskId}}
+				// fmt.Printf("Election: %2d: iniciando eleicao por volta a falha\n", TaskId)
+				//eleicao aqui
 				//controle marca o processo como funcional = inicia a eleição novament
 				controle <- 1
 			}
-		case 4: // processo de eleicao (recebe mensagem para iniciar a eleicao)
-			{
-				if bFailed { //se processo falho, envia mensagem com erro - simulando uma naoConfirmacao da mensagem
-					fmt.Printf("Election: %2d: processo falho - nao confirmacao da mensagem\n", TaskId)
-					temp.msgFail = 1
-					fmt.Println(anterior)
-					anterior <- temp //envia mensagem com erro de novo
-					//aqui talvez tenha q ser out!!!
+		case 4: // processo de eleicao (recebe mensagem para iniciar a eleicao) = INITIATE ELECTION
+			{	
+				if !bFailed {
+					fmt.Printf("Election: %2d: processo falho\n", TaskId)
+					//election
+					//COLOCAR AQUI A ELEICAO 
 
-				} else if temp.msgFail == 1 { //se a mensagem recebida foi o retorno falho de um envio, tenta enviar para outro processo
-					temp.corpo[1] = TaskId //adiciona valor de id na mensagem
-					if out == in { //quando so tem 1 processo ativo e enviaria pro canal q acabou de sair
-						actualLeader = temp.corpo[2] //recebe o value
-						fmt.Printf("Election: %2d: processo eleito: %d\n", TaskId, actualLeader)
-						fmt.Printf("%2d: Enviando confirmacao para demais processos \n", TaskId)
-						out <- mensagem{tipo:0, corpo: [3]int{TaskId, TaskId, actualLeader}}
-					} else {
-						out <- temp //envia mensagem com erro de novo
-					}
-
-				} else if temp.corpo[0] == TaskId { //mensagem de eleicao andou todo anel - marca novo lider e envia id de novo lider para demais nodos
-					actualLeader = temp.corpo[2] //recebe o value
-					fmt.Printf("Election: %2d: processo eleito: %d\n", TaskId, actualLeader)
-					out <- mensagem{tipo:0, corpo: [3]int{TaskId, TaskId, actualLeader}}
 				} else {
-					if TaskId > temp.corpo[2] { // elege novo lider a partir do criterio de menor id
-						temp.corpo[2] = TaskId
-					}
-					out <- temp
+					fmt.Printf("Election: %2d: processo falho, eleicao nao iniciada\n", TaskId)
+					controle <- 0
 				}
+				
 			}
 			case 5: // finaliza o processo
 			{
