@@ -12,12 +12,12 @@ import (
 )
 
 const (
-  Finish          = 0 // Controle solicita termino de execucao -- 5
+  ElectionConfirmation = 5 // Troca de mensagens avisando de novo lider -- 0
+  IdentifyFail    = 3 // Controle manda mensagem para um processo informando que aquele falhou -- 1
   FailedProcess   = 1 // Controle manda mensagem parq que processo fique falho -- 2
   WorkingProcess  = 2 // Controle torna processo falho para funcional -- 3
-  IdentifyFail    = 3 // Controle manda mensagem para um processo informando que aquele falhou -- 1
   Election        = 4 // Troca de mensagens entre processos para escolher um novo lider -- 4
-  ElectionConfirmation = 5 // Troca de mensagens avisando de novo lider -- 0
+  Finish          = 0 // Controle solicita termino de execucao -- 5
 )
 
 /*
@@ -188,6 +188,7 @@ func ElectionStage(id int, in chan mensagem, initialLeaderId int) {
         if fail { // Se processo falho - envia mensagem com erro (simulando uma 'nao-confirmacao' da mensagem)
           fmt.Printf("%2d: Processo est� falho - retornando msg de erro \n", id)
           message.msgFail = true
+          fmt.Println(message.idProc)
           sendMessage(message, message.idProc)
         } else if message.msgFail { // Se mensagem de eleicao recebida foi o retorno falho de um envio, tenta enviar novamente para outro processo
           newMsg := mensagem{tipo: message.tipo, idProcInicial: message.idProcInicial, value: message.value}
@@ -206,6 +207,7 @@ func ElectionStage(id int, in chan mensagem, initialLeaderId int) {
         } else { // Adiciona valor de id na mensagem (se id for maior id ja na mensagem) e envia mensagem para frente
           if id > message.value {
             message.value = id  
+            fmt.Printf("NOVO VALOR MENSAGEM: %d \n", message.value)
           }
           sendMessage(message, NextIdProcess(id))
         }
@@ -222,6 +224,7 @@ func ElectionStage(id int, in chan mensagem, initialLeaderId int) {
           if nextId == id {
             break
           }
+          
           sendMessage(newMsg, NextIdProcess(message.idProc))
         } else if message.idProcInicial != id {
           fmt.Printf("%2d: Mensagem - Processo Eleito: %d \n", id, message.value)
@@ -234,6 +237,8 @@ func ElectionStage(id int, in chan mensagem, initialLeaderId int) {
         fmt.Printf("%2d: Mensagem desconhecida\n", id)
       }
     }
+		fmt.Printf("Election: %2d: lider atual %d\n", id, leaderId)
+
   }
 
     fmt.Printf("%2d: terminei \n", id)
