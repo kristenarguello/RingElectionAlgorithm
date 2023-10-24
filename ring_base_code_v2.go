@@ -1,8 +1,6 @@
 // Código exemplo para o trabaho de sistemas distribuidos (eleicao em anel)
 // By Cesar De Rose - 2022
 
-// mudar o estado local = ideia do trabalho
-
 package main
 
 import (
@@ -11,14 +9,19 @@ import (
 )
 
 /* TIPOS DE MENSAGENS NO CANAL INT (tipo)
+0 = avisando de novo lider
+1 = controle manda mensagem para um processo informando que aquele falhou
 2 = processo falho
 3 = processo ativo
-4 = consumir leitura -> mensagem de término
+4 = troca de mensagens entre processos para escolher um lider
+5 =  consumir leitura -> mensagem de término = FINISH
 */
 
 type mensagem struct {
 	tipo  int    // tipo da mensagem para fazer o controle do que fazer (eleição, confirmacao da eleicao)
 	corpo [3]int // conteudo da mensagem para colocar os ids (usar um tamanho ocmpativel com o numero de processos no anel)
+		// idProcInicial, idProc, value
+	msgFail int // 1 e 0 para representar um bool
 }
 
 var (
@@ -36,28 +39,108 @@ func ElectionControler(in chan int) {
 	defer wg.Done()
 	fmt.Println("Controle: iniciando rotina controle de eleição")
 
-	var temp mensagem
+	//mudar aqui pra fazer os testes
 
 	// comandos para o anel iniciam aqui
 
-	// mudar o processo 0 - canal de entrada 3 - para falho (defini mensagem tipo 2 pra isto)
-	temp.tipo = 2
-	chans[3] <- temp
-	fmt.Printf("Controle: mudar o processo 0 para falho\n")
+	/*
+		processo 0 = canal 3
+		processo 1 = canal 0
+		processo 2 = canal 1
+		processo 3 = canal 2
+	*/
+	
+	//definir o processo 1 como falho
+	fmt.Printf("\nEnviando comando %d para processo %d \n", 2,1)
+	fmt.Print("Controle: definir o processo 1 como falho")
+	var msg mensagem
+	msg.tipo = 2
+	chans[0] <- msg
 	fmt.Printf("Controle: confirmação %d\n", <-in) // receber e imprimir confirmação
 
-	// mudar o processo 1 - canal de entrada 0 - para falho (defini mensagem tipo 2 pra isto)
-	temp.tipo = 2
-	chans[0] <- temp
-	fmt.Printf("Controle: mudar o processo 1 para falho\n")
+	//definir o processo 3 como falho
+	fmt.Printf("\nEnviando comando %d para processo %d \n", 2,3)
+	fmt.Print("Controle: definir o processo 3 como falho")
+	msg = mensagem{}
+	msg.tipo = 2
+	chans[2] <- msg
 	fmt.Printf("Controle: confirmação %d\n", <-in) // receber e imprimir confirmação
 
-	// matar os outros processos com mensagens não conhecidas (só pra cosumir a leitura)
-	temp.tipo = 4
-	fmt.Println("Controle: encerrando todos os processos enviando mensagem de termino (codigo 4)")
-	for _, c := range chans {
-		c <- temp
-	}
+	//definir o processo 2 como aviso que aquele processo falhou
+	fmt.Printf("\nEnviando comando %d para processo %d \n", 1,2)
+	fmt.Print("Controle: definir o processo 2 como aviso que aquele processo falhou")
+	msg = mensagem{}
+	msg.tipo = 1
+	chans[1] <- msg
+	fmt.Printf("Controle: confirmação %d\n", <-in) // receber e imprimir confirmação
+
+	//definir o processo 0 como falho
+	fmt.Printf("\nEnviando comando %d para processo %d \n", 2,0)
+	fmt.Print("Controle: definir o processo 0 como falho")
+	msg = mensagem{}
+	msg.tipo = 2
+	chans[3] <- msg
+	fmt.Printf("Controle: confirmação %d\n", <-in) // receber e imprimir confirmação
+
+	//definir o processo 3 como ativo
+	fmt.Printf("\nEnviando comando %d para processo %d \n", 3,3)
+	fmt.Print("Controle: definir o processo 3 como ativo")
+	msg = mensagem{}
+	msg.tipo = 3
+	chans[2] <- msg
+	fmt.Printf("Controle: confirmação %d\n", <-in) // receber e imprimir confirmação
+
+	//matar o processo 1
+	fmt.Printf("\nEnviando comando %d para processo %d \n", 5,1)
+	fmt.Print("Controle: matar o processo 1")
+	msg = mensagem{}
+	msg.tipo = 5
+	chans[0] <- msg
+	fmt.Printf("Controle: confirmação %d\n", <-in) // receber e imprimir confirmação
+
+	//matar o processo 2
+	fmt.Printf("\nEnviando comando %d para processo %d \n", 5,2)
+	fmt.Print("Controle: matar o processo 2")
+	msg = mensagem{}
+	msg.tipo = 5
+	chans[1] <- msg
+	fmt.Printf("Controle: confirmação %d\n", <-in) // receber e imprimir confirmação
+
+	//matar o processo 3
+	fmt.Printf("\nEnviando comando %d para processo %d \n", 5,3)
+	fmt.Print("Controle: matar o processo 3")
+	msg = mensagem{}
+	msg.tipo = 5
+	chans[2] <- msg
+	fmt.Printf("Controle: confirmação %d\n", <-in) // receber e imprimir confirmação
+
+	//matar o processo 0
+	fmt.Printf("\nEnviando comando %d para processo %d \n", 5,0)
+	fmt.Print("Controle: matar o processo 0")
+	msg = mensagem{}
+	msg.tipo = 5
+	chans[3] <- msg
+	fmt.Printf("Controle: confirmação %d\n", <-in) // receber e imprimir confirmação
+
+
+	// // mudar o processo 0 - canal de entrada 3 - para falho (defini mensagem tipo 2 pra isto)
+	// temp.tipo = 2
+	// chans[3] <- temp
+	// fmt.Printf("Controle: mudar o processo 0 para falho\n")
+	// fmt.Printf("Controle: confirmação %d\n", <-in) // receber e imprimir confirmação
+
+	// // mudar o processo 1 - canal de entrada 0 - para falho (defini mensagem tipo 2 pra isto)
+	// temp.tipo = 2
+	// chans[0] <- temp
+	// fmt.Printf("Controle: mudar o processo 1 para falho\n")
+	// fmt.Printf("Controle: confirmação %d\n", <-in) // receber e imprimir confirmação
+
+	// // matar os outros processos com mensagens não conhecidas (só pra cosumir a leitura)
+	// temp.tipo = 4 falho falho ativo deu deadlock
+	// fmt.Println("Controle: encerrando todos os processos enviando mensagem de termino (codigo 4)")
+	// for _, c := range chans {
+	// 	c <- temp
+	// }
 	// chans[1] <- temp = mesma logica que aqui, so que percorre todos os canais ao invés de um só por vez
 	// chans[2] <- temp
 
@@ -79,23 +162,71 @@ func ElectionStage(TaskId int, in chan mensagem, out chan mensagem, leader int) 
 		fmt.Printf("Election: %2d: recebi mensagem %d, [ %d, %d, %d ]\n", TaskId, temp.tipo, temp.corpo[0], temp.corpo[1], temp.corpo[2])
 
 		switch temp.tipo {
+		case 0: //electionconfirmation
+			{
+
+			}
+		case 1: // controle indica para este processo que um processo falhou = inicia processo de eleição
+			{
+				if bFailed { //nao faz nada se ja estiver falho
+					fmt.Printf("%2d: processo falho\n", TaskId)
+					controle <- 0
+					break
+				}
+				fmt.Printf("%2d: processo falho\n", TaskId)
+				controle <- 1
+				out <- mensagem{tipo:4, corpo: [3]int{TaskId, TaskId, TaskId}}
+				//mensagem para troca de mensagens para escolher um novo líder
+			}
 		case 2:
 			{
 				bFailed = true
 				fmt.Printf("Election: %2d: falho %v \n", TaskId, bFailed)
 				fmt.Printf("Election: %2d: lider atual %d\n", TaskId, actualLeader)
-				controle <- -5
+				controle <- 1
 			}
 		case 3:
 			{
 				bFailed = false
 				fmt.Printf("Election: %2d: falho %v \n", TaskId, bFailed)
 				fmt.Printf("Election: %2d: lider atual %d\n", TaskId, actualLeader)
-				controle <- -5
+				out <- mensagem{tipo:4, corpo: [3]int{TaskId, TaskId, TaskId}}
+				//controle marca o processo como funcional = inicia a eleição novament
+				controle <- 1
 			}
-		case 4: //chegou em um processo com mensagem inserida para consumir leitura
+		case 4: 
+			{
+				if bFailed { //se processo falho, envia mensagem com erro - simulando uma naoConfirmacao da mensagem
+					fmt.Printf("Election: %2d: processo falho - nao confirmacao da mensagem\n", TaskId)
+					temp.msgFail = 1
+					in <- temp //envia mensagem com erro de novo
+					//aqui talvez tenha q ser out!!!
+
+				} else if temp.msgFail == 1 { //se a mensagem recebida foi o retorno falho de um envio, tenta enviar para outro processo
+					if out == in { //quando so tem 1 processo ativo e enviaria pro canal q acabou de sair
+						actualLeader = temp.corpo[2] //recebe o value
+						fmt.Printf("Election: %2d: processo eleito: %d\n", TaskId, actualLeader)
+						fmt.Printf("%2d: Enviando confirmacao para demais processos \n", TaskId)
+						out <- mensagem{tipo:0, corpo: [3]int{TaskId, TaskId, actualLeader}}
+					} else {
+						out <- temp //envia mensagem com erro de novo
+					}
+
+				} else if temp.corpo[0] == TaskId { //mensagem de eleicao andou todo anel - marca novo lider e envia id de novo lider para demais nodos
+					actualLeader = temp.corpo[2] //recebe o value
+					fmt.Printf("Election: %2d: processo eleito: %d\n", TaskId, actualLeader)
+					out <- mensagem{tipo:0, corpo: [3]int{TaskId, TaskId, actualLeader}}
+				} else {
+					if TaskId > temp.corpo[2] { // elege novo lider a partir 
+						temp.corpo[2] = TaskId
+					}
+					out <- temp
+				}
+			}
+			case 5: 
 			{
 				fmt.Println("Election: chegou em processo com mensagem de termino (codigo 4)")
+				controle <- 1
 				stop = true // matar o processo
 			}
 		default:
